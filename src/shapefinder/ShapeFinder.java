@@ -6,23 +6,43 @@
 package shapefinder;
 
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
 
 public class ShapeFinder {
 
     public static void main(String[] args) {
         ShapeFinderModel model = generateModel();
-
-        for (int i = 0; i < model.filteredImage.image.length; i++) {
-            for (int j = 0; j < model.filteredImage.image[0].length; j++) {
-                if (model.filteredImage.image[i][j] > 0) {
-                    checkForSquare(model.filteredImage.image, i, j, model.tolerance);
-                    checkForRectangle(model.filteredImage.image, i, j, model.tolerance);
-                    checkForCircle(model.filteredImage.image, i, j, model.tolerance);
+        
+        //set up the regions
+        Regions r = new Regions(2, model.rawImage.width, model.rawImage.height, model.rawImage.image, 0, true, model.tolerance);
+        r.findRegions();
+        r.filterRegions(100, 10000, false, 0);
+        
+        ArrayList<Integer> regionIds = new ArrayList<Integer>();
+        
+        //find out what regionIDs have shapes
+        for (int i = 0; i < r.labeledImage.length; i++) {
+            for (int j = 0; j < r.labeledImage[0].length; j++) {
+                int cur = r.labeledImage[i][j];
+                if(cur > 0 && !regionIds.contains(cur)){
+                    regionIds.add(cur);
                 }
-
             }
         }
-        printImage(model.filteredImage.image);
+        //printImage(r.labeledImage);
+        
+        //iterate through each image and determine what they are
+        for (int i = 0; i < regionIds.size(); i++) {
+            int regionId = regionIds.get(i);
+            int[][] cur = r.getSingleRegion(regionId);
+            int pixelCount = getPixelCount(cur);
+
+            //printImage(cur);
+            
+            boolean isSquare = checkForSquare(cur, pixelCount, model.tolerance);
+            boolean isRect = checkForRectangle(cur, pixelCount, model.tolerance);
+            System.out.println("");
+        }
     }
 
     public static ShapeFinderModel generateModel() {
@@ -34,10 +54,6 @@ public class ShapeFinder {
         //String imagePath = input.getKeyboardInput("Specify the name of the file containing the image data: ");
         String imagePath = "lpg2";
         model.rawImage = getImage(imagePath);
-
-        Regions r = new Regions(2, model.rawImage.width, model.rawImage.height, model.rawImage.image, 0, true, model.tolerance);
-        model.filteredImage = new Image(r.getSingleRegion(0), model.rawImage.width, model.rawImage.height);
-
         return model;
     }
 
@@ -108,30 +124,104 @@ public class ShapeFinder {
         }
     }
 
-    private static boolean checkForSquare(int[][] image, int i, int j, int tolerance) {
+    public static int getPixelCount(int[][] image){
+        int count = 0;
+        for (int i = 0; i < image.length; i++) {
+            for (int j = 0; j < image[0].length; j++) {
+                if(image[i][j] > 0){
+                    count++;
+                }
+            }
+        }
+        
+        return count;
+    }
+    
+    private static boolean checkForSquare(int[][] image, int pixelCount, int tolerance) {
         int squareWidth = 0;
         int squareHeight = 0;
-
+        int i = 0; 
+        int j = 0;
+        
+        
+        //find where the shape is
+        for (int x = 0; x < image.length; x++) {
+            for (int y = 0; y < image[0].length; y++) {
+                if(image[x][y] > 0){
+                    i = x;
+                    j = y;
+                    break;
+                }
+            }
+            if(i != 0 && j != 0){ break; }
+        }
+        
+        int temp = i;
         //compute width of square
         while (image[i][j] > 0) {
             squareWidth++;
             i++;
         }
-        
+        i = temp;
         while(image[i][j] > 0){
             squareHeight++;
             j++;
         }
 
-        if(squareWidth == squareHeight){
+        if(squareWidth + tolerance >= squareHeight && squareWidth - tolerance <= squareHeight){
             return true;
         }else{
             return false;
         }
     }
 
-    private static boolean checkForRectangle(int[][] image, int i, int j, int tolerance) {
-        return false;
+    private static boolean checkForRectangle(int[][] image, int pixelCount, int tolerance) {
+        int width = 0;
+        int height = 0;
+        int i = 0; 
+        int j = 0;
+        
+        //find where the shape is
+        for (int x = 0; x < image.length; x++) {
+            for (int y = 0; y < image[0].length; y++) {
+                if(image[x][y] > 0){
+                    i = x;
+                    j = y;
+                    break;
+                }
+            }
+            if(i != 0 && j != 0){ break; }
+        }
+        
+        int tempI = i;
+        int tempJ = j;
+        
+        //compute dimensions of rectangle
+        while (image[i][j] > 0) {
+            height++;
+            i++;
+        }
+        
+        i = tempI;
+        
+        while(image[i][j] > 0){
+            width++;
+            j++;
+        }
+        
+        j = tempJ;
+        
+        //iterate through the dimensions of the rectangle and see if there are any points at which it isn't filled
+        int searchCount = 0;
+        for (int k = 0; k < height; k++) {
+            for (int l = 0; l < width; l++) {
+                if(image[k + i][l + j] == 0){
+                    return false;
+                }
+                searchCount++;
+            }
+        }
+        return searchCount == pixelCount;
     }
 
     private static boolean checkForCircle(int[][] image, int i, int j, int tolerance) {

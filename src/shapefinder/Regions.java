@@ -85,7 +85,7 @@ public class Regions {
 		labeledImage = new int[imageHeight][imageWidth];
 		if (imageType == 3)
 			grayTolerance = 0;
-		maxCount = 50000;
+		maxCount = 500000;
 		pixelsInRegion = new int[maxCount+2];			//position 0 not used in these arrays
 		firstPixelInRegion = new int[maxCount+2][2];
 		borderPixelCount = new int[maxCount+2];
