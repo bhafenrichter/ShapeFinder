@@ -199,13 +199,23 @@ public class EasyImageDisplay extends Frame {
 
 		while (a == b) {
 			if (imageType == 1) {
-				for (row = 0; row < imageHeight; row++) {
-					for (column = 0; column < imageWidth; column++) {
-						color = new Color(redPixels[row][column], greenPixels[row][column], bluePixels[row][column]);
-						g.setColor(color);
-						g.drawLine(column + windowSideOffset, row + windowHeaderOffset, column + windowSideOffset, row + windowHeaderOffset);
-					}
-				}
+                            for (row = 0; row < imageHeight; row++) {
+                                for (column = 0; column < imageWidth; column++) {
+                                    //draw the grey pixel
+                                    if (redPixels[row][column] == 0 && greenPixels[row][column] == 0 && bluePixels[row][column] == 0) {
+                                        pixel = pixels[row][column];
+                                        color = new Color(pixel, pixel, pixel);
+                                        g.setColor(color);
+                                        g.drawLine(column + windowSideOffset, row + windowHeaderOffset, column + windowSideOffset, row + windowHeaderOffset);
+                                    } else {
+                                        //it needs to be highlighted because its a shape
+                                        color = new Color(redPixels[row][column], greenPixels[row][column], bluePixels[row][column]);
+                                        g.setColor(color);
+                                        g.drawLine(column + windowSideOffset, row + windowHeaderOffset, column + windowSideOffset, row + windowHeaderOffset);
+                                    }
+
+                                }
+                            }
 			}
 			else if ((imageType == 2) || (imageType == 3)) {
 				for (row = 0; row < imageHeight; row++) {

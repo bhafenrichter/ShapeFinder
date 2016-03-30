@@ -39,10 +39,23 @@ public class ShapeFinder {
 
             //printImage(cur);
             
-            boolean isSquare = checkForSquare(cur, pixelCount, model.tolerance);
-            boolean isRect = checkForRectangle(cur, pixelCount, model.tolerance);
-            System.out.println("");
+            boolean isSquare = checkForSquare(cur, model, pixelCount, model.tolerance);
+            boolean isRect = false;
+            if(!isSquare){
+                isRect = checkForRectangle(cur, model, pixelCount, model.tolerance);
+            }
+            
+            if(isSquare){model.squareCount++;}
+            if(isRect){model.rectangleCount++;}
         }
+        System.out.println("Circles: " + model.circleCount + ", Squares: " + model.squareCount + ", Rectangles: " + model.rectangleCount);
+        
+        //draw the shapes
+        int[][] gray = model.rawImage.image;
+        
+        EasyImageDisplay sampleDisplayObject;
+        sampleDisplayObject = new EasyImageDisplay(1, model.rawImage.width, model.rawImage.height, model.red, model.green, model.blue, gray);
+			sampleDisplayObject.showImage("Image Display Routine",true);
     }
 
     public static ShapeFinderModel generateModel() {
@@ -53,7 +66,7 @@ public class ShapeFinder {
         model.tolerance = 0;
         //String imagePath = input.getKeyboardInput("Specify the name of the file containing the image data: ");
         String imagePath = "lpg2";
-        model.rawImage = getImage(imagePath);
+        model.setImage(getImage(imagePath));
         return model;
     }
 
@@ -137,7 +150,7 @@ public class ShapeFinder {
         return count;
     }
     
-    private static boolean checkForSquare(int[][] image, int pixelCount, int tolerance) {
+    private static boolean checkForSquare(int[][] image, ShapeFinderModel model, int pixelCount, int tolerance) {
         int squareWidth = 0;
         int squareHeight = 0;
         int i = 0; 
@@ -156,26 +169,33 @@ public class ShapeFinder {
             if(i != 0 && j != 0){ break; }
         }
         
-        int temp = i;
+        int tempI = i;
+        int tempJ = j;
         //compute width of square
         while (image[i][j] > 0) {
             squareWidth++;
             i++;
         }
-        i = temp;
+        i = tempI;
         while(image[i][j] > 0){
             squareHeight++;
             j++;
         }
-
+        j = tempJ;
         if(squareWidth + tolerance >= squareHeight && squareWidth - tolerance <= squareHeight){
+            //highlight the values on the array
+            for (int k = 0; k < squareHeight; k++) {
+                for (int l = 0; l < squareWidth; l++) {
+                    model.red[k + i][l + j] = 255;
+                }
+            }
             return true;
         }else{
             return false;
         }
     }
 
-    private static boolean checkForRectangle(int[][] image, int pixelCount, int tolerance) {
+    private static boolean checkForRectangle(int[][] image, ShapeFinderModel model, int pixelCount, int tolerance) {
         int width = 0;
         int height = 0;
         int i = 0; 
@@ -221,7 +241,17 @@ public class ShapeFinder {
                 searchCount++;
             }
         }
-        return searchCount == pixelCount;
+        if (searchCount == pixelCount) {
+            //highlight the effected pixels
+            for (int k = 0; k < height; k++) {
+                for (int l = 0; l < width; l++) {
+                    model.green[k + i][l + j] = 255;
+                }
+            }
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private static boolean checkForCircle(int[][] image, int i, int j, int tolerance) {

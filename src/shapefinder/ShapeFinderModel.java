@@ -18,6 +18,9 @@ public class ShapeFinderModel {
     int squareCount;
     int rectangleCount;
     int circleCount;
+    int[][] red;
+    int[][] blue;
+    int[][] green;
     
     public ShapeFinderModel(){
         int[][] image = new int[0][0];
@@ -27,5 +30,12 @@ public class ShapeFinderModel {
         circleCount = 0;
         width = 0;
         height = 0;
+    }
+    
+    public void setImage(Image image){
+        rawImage = image;
+        red = new int[rawImage.height][rawImage.width];
+        blue = new int[rawImage.height][rawImage.width];
+        green = new int[rawImage.height][rawImage.width];
     }
 }
