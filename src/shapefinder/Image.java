@@ -14,7 +14,7 @@ public class Image {
     int[][] image;
     int width;
     int height;
-
+    int[][] centroid;
     public Image() {
 
     }

@@ -17,6 +17,7 @@ public class ShapeFinder {
         Regions r = new Regions(2, model.rawImage.width, model.rawImage.height, model.rawImage.image, 0, true, model.tolerance);
         r.findRegions();
         r.filterRegions(100, 10000, false, 0);
+        r.computeRegionProperties();
         
         ArrayList<Integer> regionIds = new ArrayList<Integer>();
         
@@ -26,24 +27,28 @@ public class ShapeFinder {
                 int cur = r.labeledImage[i][j];
                 if(cur > 0 && !regionIds.contains(cur)){
                     regionIds.add(cur);
+                    
                 }
             }
         }
-        //printImage(r.labeledImage);
         
         //iterate through each image and determine what they are
         for (int i = 0; i < regionIds.size(); i++) {
             int regionId = regionIds.get(i);
             int[][] cur = r.getSingleRegion(regionId);
             int pixelCount = getPixelCount(cur);
-
-            //printImage(cur);
             
+            //printImage(r.centroids);
+
+            int centroidX = r.centroids[regionId][0];
+            int centroidY = r.centroids[regionId][1];
+            printImage(cur);
             boolean isSquare = checkForSquare(cur, model, pixelCount, model.tolerance);
             boolean isRect = false;
             if(!isSquare){
                 isRect = checkForRectangle(cur, model, pixelCount, model.tolerance);
             }
+            boolean isCircle = checkForCircle(cur, model, centroidX, centroidY, model.tolerance);
             
             if(isSquare){model.squareCount++;}
             if(isRect){model.rectangleCount++;}
@@ -131,7 +136,7 @@ public class ShapeFinder {
     public static void printImage(int[][] imageData) {
         for (int i = 0; i < imageData.length; i++) {
             for (int j = 0; j < imageData[0].length; j++) {
-                System.out.print(imageData[i][j] + " ");
+                System.out.print(imageData[i][j]);
             }
             System.out.println("");
         }
@@ -254,7 +259,52 @@ public class ShapeFinder {
         }
     }
 
-    private static boolean checkForCircle(int[][] image, int i, int j, int tolerance) {
+    private static boolean checkForCircle(int[][] image, ShapeFinderModel model, int centroidX, int centroidY, int tolerance) {
+        //coordinate of first top of circle
+//        int x1 = 0; 
+//        int y1 = 0;
+//        
+//        //find where the shapes top is
+//        for (int x = 0; x < image.length; x++) {
+//            for (int y = 0; y < image[0].length; y++) {
+//                if(image[x][y] > 0){
+//                    x1 = x;
+//                    y1 = y;
+//                    break;
+//                }
+//            }
+//            if(x1 != 0 && y1 != 0){ break; }
+//        }
+//        
+//        //coordinate of the bottom of the circle
+//        int x2 = 0;
+//        int y2 = 0;
+//        //find out where the shapes bottom is to compute diameter
+//        for (int x = 0; x < image.length; x++) {
+//            for (int y = 0; y < image[0].length; y++) {
+//                if(x > 0 && image[x][y] == 0 && image[x-1][y] > 0){
+//                    x2 = x;
+//                    y2 = y;
+//                    break;
+//                }
+//            }
+//            if(x2 != 0 && y2 != 0){ break; }
+//        }
+//        
+//        int radius = (x2 - x1) / 2;
+//        double area = Math.PI * Math.pow(radius, 2);
+
+        //calculate the radius
+        int radius = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX][i + centroidY] != 0){
+                radius++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        
         return false;
     }
 }
