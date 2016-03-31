@@ -1,8 +1,15 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+//Program:      Hafenrichter3.java
+//Course:       COSC 430
+//Description:  Implementation of the brilliant Shape Finder assignment that identifies filled squares, non-squares
+//              and circles in a grayscale image.
+//Author:       Brandon Hafenrichter
+//Revised       3/30/16
+//Language:     Java
+//IDE:          Netbeans
+//**************************************************************************************************************
+//**************************************************************************************************************
+//Class: ShapeFinder.java
+//Description: Hold the core methods used to verify if shape is square, rectangle, circle, or none of the above
 package shapefinder;
 
 import java.io.RandomAccessFile;
@@ -10,24 +17,28 @@ import java.util.ArrayList;
 
 public class ShapeFinder {
 
+//**************************************************************************************************************
+//Method:           Main
+//Description:      This method asks the user for the input needed, calculates which regionIds need to be traversed
+//                  because they contain a shape and finally verifying what shape the object in that region is
+//Parameters:       String[] args   standard procedure for main function of java program
+//Returns:          None
     public static void main(String[] args) {
-        ShapeFinderModel model = generateModel();
-        
+        while(true){
+            ShapeFinderModel model = generateModel();
         //set up the regions
-        Regions r = new Regions(2, model.rawImage.width, model.rawImage.height, model.rawImage.image, 0, true, model.tolerance);
+        Regions r = new Regions(2, model.rawImage.width, model.rawImage.height, model.rawImage.image, 0, true, 0);
         r.findRegions();
         r.filterRegions(100, 10000, false, 0);
         r.computeRegionProperties();
         
         ArrayList<Integer> regionIds = new ArrayList<Integer>();
-        
         //find out what regionIDs have shapes
         for (int i = 0; i < r.labeledImage.length; i++) {
             for (int j = 0; j < r.labeledImage[0].length; j++) {
                 int cur = r.labeledImage[i][j];
                 if(cur > 0 && !regionIds.contains(cur)){
                     regionIds.add(cur);
-                    
                 }
             }
         }
@@ -38,20 +49,17 @@ public class ShapeFinder {
             int[][] cur = r.getSingleRegion(regionId);
             int pixelCount = getPixelCount(cur);
             
-            //printImage(r.centroids);
-
             int centroidX = r.centroids[regionId][0];
             int centroidY = r.centroids[regionId][1];
-            printImage(cur);
-            boolean isSquare = checkForSquare(cur, model, pixelCount, model.tolerance);
-            boolean isRect = false;
-            if(!isSquare){
-                isRect = checkForRectangle(cur, model, pixelCount, model.tolerance);
-            }
-            boolean isCircle = checkForCircle(cur, model, centroidX, centroidY, model.tolerance);
+            //printImage(cur);
             
-            if(isSquare){model.squareCount++;}
-            if(isRect){model.rectangleCount++;}
+            if(checkForSquare(cur, model, model.tolerance)){
+                model.squareCount++;
+            }else if(checkForCircle(cur, model, centroidX, centroidY, pixelCount, model.circleTolerance)){
+                model.circleCount++;
+            }else if(checkForRectangle(cur, model, pixelCount)){
+                model.rectangleCount++;
+            }
         }
         System.out.println("Circles: " + model.circleCount + ", Squares: " + model.squareCount + ", Rectangles: " + model.rectangleCount);
         
@@ -61,20 +69,38 @@ public class ShapeFinder {
         EasyImageDisplay sampleDisplayObject;
         sampleDisplayObject = new EasyImageDisplay(1, model.rawImage.width, model.rawImage.height, model.red, model.green, model.blue, gray);
 			sampleDisplayObject.showImage("Image Display Routine",true);
+        
+            KeyboardInputClass input = new KeyboardInputClass();
+            String decision = input.getKeyboardInput("Want to try another image? (Y/N)");
+            if(decision.toLowerCase().equals("n") || decision.toLowerCase().equals("no")){
+                break;
+            }
+        }
+        
     }
 
+//**************************************************************************************************************
+//Method:       generateModel
+//Description:  gets all of the required information from the user in order to run the program
+//Parameters:   None
+//Returns:      ShapeFinderModel model  this is the model that contains all of the data for the program
     public static ShapeFinderModel generateModel() {
         KeyboardInputClass input = new KeyboardInputClass();
         ShapeFinderModel model = new ShapeFinderModel();
 
-        //model.tolerance = input.getInteger(false, 0, 0, 0, "Specify Tolerance for Shape Finder: (Ex. 4)");
-        model.tolerance = 0;
-        //String imagePath = input.getKeyboardInput("Specify the name of the file containing the image data: ");
-        String imagePath = "lpg2";
+        model.tolerance = 5;
+        model.tolerance = input.getInteger(false, 0, 0, 0, "Specify Tolerance for Shape Finder: (Default: 5)");
+        
+        model.circleTolerance = 5;
+        String imagePath = input.getKeyboardInput("Specify the name of the file containing the image data: ");
         model.setImage(getImage(imagePath));
         return model;
     }
-
+//**************************************************************************************************************
+//Method:       getImage
+//Description:  This takes the image path gathered from the generateModel() and finds/parses the image for later use
+//Parameters:   String imagePath    path to the image
+//Returns:      Image               returns the image in an int[][] along with its width and height
     private static Image getImage(String imagePath) {
         KeyboardInputClass input = new KeyboardInputClass();
         String userInput = "";
@@ -132,7 +158,11 @@ public class ShapeFinder {
         }
         return image;
     }
-
+//**************************************************************************************************************
+//Method:       printImage
+//Description:  a debugging method that will print any int[][] onto the screen
+//Parameters:   int[][] imageData   the image that needs to be printed
+//Returns:      None
     public static void printImage(int[][] imageData) {
         for (int i = 0; i < imageData.length; i++) {
             for (int j = 0; j < imageData[0].length; j++) {
@@ -141,7 +171,12 @@ public class ShapeFinder {
             System.out.println("");
         }
     }
-
+//**************************************************************************************************************
+//Method:       getPixelCount
+//Description:  This method gathers how many pixels are in the current region.  This is used to compare areas
+//              later in verification of certain shapes
+//Parameters:   int[][] image   the image that needs to be analyzed
+//Returns:      int             the number of pixels in the image
     public static int getPixelCount(int[][] image){
         int count = 0;
         for (int i = 0; i < image.length; i++) {
@@ -154,8 +189,14 @@ public class ShapeFinder {
         
         return count;
     }
-    
-    private static boolean checkForSquare(int[][] image, ShapeFinderModel model, int pixelCount, int tolerance) {
+//**************************************************************************************************************
+//Method:       checkForSquare
+//Description:  This method checks the int[][] image to determine whether or not it contains a square
+//Parameters:   int[][] image           the image to be checked
+//              ShapeFinderModel model  if it is a square, the proper pixels need to be highlighted
+//              int tolerance           determines how much of square the image has to be
+//Returns:      boolean                 true if it is a square, false otherwise
+    private static boolean checkForSquare(int[][] image, ShapeFinderModel model, int tolerance) {
         int squareWidth = 0;
         int squareHeight = 0;
         int i = 0; 
@@ -199,8 +240,14 @@ public class ShapeFinder {
             return false;
         }
     }
-
-    private static boolean checkForRectangle(int[][] image, ShapeFinderModel model, int pixelCount, int tolerance) {
+//**************************************************************************************************************
+//Method:       checkForRectangle
+//Description:  This method checks the int[][] image to determine whether or not it contains a rectangle
+//Parameters:   int[][] image           the image to be checked
+//              ShapeFinderModel model  if it is a square, the proper pixels need to be highlighted
+//              int pixelCount          compares the area to the pixel count to verify shape
+//Returns:      boolean                 true if it is a square, false otherwise
+    private static boolean checkForRectangle(int[][] image, ShapeFinderModel model, int pixelCount) {
         int width = 0;
         int height = 0;
         int i = 0; 
@@ -258,42 +305,17 @@ public class ShapeFinder {
             return false;
         }
     }
-
-    private static boolean checkForCircle(int[][] image, ShapeFinderModel model, int centroidX, int centroidY, int tolerance) {
-        //coordinate of first top of circle
-//        int x1 = 0; 
-//        int y1 = 0;
-//        
-//        //find where the shapes top is
-//        for (int x = 0; x < image.length; x++) {
-//            for (int y = 0; y < image[0].length; y++) {
-//                if(image[x][y] > 0){
-//                    x1 = x;
-//                    y1 = y;
-//                    break;
-//                }
-//            }
-//            if(x1 != 0 && y1 != 0){ break; }
-//        }
-//        
-//        //coordinate of the bottom of the circle
-//        int x2 = 0;
-//        int y2 = 0;
-//        //find out where the shapes bottom is to compute diameter
-//        for (int x = 0; x < image.length; x++) {
-//            for (int y = 0; y < image[0].length; y++) {
-//                if(x > 0 && image[x][y] == 0 && image[x-1][y] > 0){
-//                    x2 = x;
-//                    y2 = y;
-//                    break;
-//                }
-//            }
-//            if(x2 != 0 && y2 != 0){ break; }
-//        }
-//        
-//        int radius = (x2 - x1) / 2;
-//        double area = Math.PI * Math.pow(radius, 2);
-
+    
+//**************************************************************************************************************
+//Method:       checkForCircle
+//Description:  This method checks the int[][] image to determine whether or not it contains a circle
+//Parameters:   int[][] image           the image to be checked
+//              ShapeFinderModel model  if it is a square, the proper pixels need to be highlighted
+//              int pixelCount          number of pixels the circle takes up
+//              int centroidX,centroidY the centroid coordinates of the potential circle
+//              int tolerance           determines how much of circle the image has to be
+//Returns:      boolean                 true if it is a square, false otherwise
+    private static boolean checkForCircle(int[][] image, ShapeFinderModel model, int centroidX, int centroidY, int pixelCount, int tolerance) {
         //calculate the radius
         int radius = 0;
         for (int i = 0; i < image.length; i++) {
@@ -304,7 +326,106 @@ public class ShapeFinder {
                 break;
             }
         }
+        //check other side
+        int otherSideRadius = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX][centroidY - i] != 0){
+                otherSideRadius++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        //check top
+        int topRadius = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[i + centroidX][centroidY] != 0){
+                topRadius++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
         
-        return false;
+        //check bottom
+        int bottomRadius = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX - i][centroidY] != 0){
+                bottomRadius++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        
+        //check diagonals
+        int topRightDiagonal = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX + i][centroidY + i] != 0){
+                topRightDiagonal++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        int topLeftDiagonal = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX - i][centroidY + i] != 0){
+                topLeftDiagonal++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        int bottomRightDiagonal = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX + i][centroidY - i] != 0){
+                bottomRightDiagonal++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        int bottomLeftDiagonal = 0;
+        for (int i = 0; i < image.length; i++) {
+            if(i + centroidY < image.length && image[centroidX - i][centroidY - i] != 0){
+                bottomLeftDiagonal++;
+            }else{
+                //we've reached the end
+                break;
+            }
+        }
+        
+        int radiusAvg = (radius + topRadius + bottomRadius + otherSideRadius) / 4;
+        int diagonalAvg = (topRightDiagonal + topLeftDiagonal + bottomRightDiagonal + bottomLeftDiagonal) / 4;
+        int squareArea = (radius * 2) * (radius * 2);
+        int lowerRadiusBounds = radiusAvg - tolerance;
+        int upperRadiusBounds = radiusAvg + tolerance;
+        int lowerDiagonalBounds = diagonalAvg - tolerance;
+        int upperDiagonalBounds = diagonalAvg + tolerance;
+        
+        if(radius >= lowerRadiusBounds && radius <= upperRadiusBounds 
+                && topRadius >= lowerRadiusBounds && topRadius <= upperRadiusBounds 
+                && bottomRadius >= lowerRadiusBounds && bottomRadius <= upperRadiusBounds 
+                && otherSideRadius >= lowerRadiusBounds && otherSideRadius <= upperRadiusBounds 
+                && topRightDiagonal >= lowerDiagonalBounds && topRightDiagonal <= upperDiagonalBounds 
+                && topLeftDiagonal >= lowerDiagonalBounds && topLeftDiagonal <= upperDiagonalBounds 
+                && bottomRightDiagonal >= lowerDiagonalBounds && bottomRightDiagonal <= upperDiagonalBounds 
+                && bottomLeftDiagonal >= lowerDiagonalBounds && bottomLeftDiagonal <= upperDiagonalBounds 
+                && radiusAvg > 5
+                && pixelCount < squareArea
+                && diagonalAvg != radiusAvg){
+            //fill the circle in
+            for (int i = 0; i < image.length; i++) {
+                for (int j = 0; j < image[0].length; j++) {
+                    if(image[i][j] > 0){
+                        model.blue[i][j] = 255;
+                    }
+                }
+            }
+            return true;
+        }else{
+            return false;
+        }
     }
 }

@@ -1,20 +1,16 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+//**************************************************************************************************************
+//Class: ShapeFinderModel.java
+//Description: contains all of the vital information to run the Shape Finder program correctly
+
 package shapefinder;
 
-/**
- *
- * @author Brandon
- */
 public class ShapeFinderModel {
     Image rawImage;
     Image filteredImage;
     int width; 
     int height;
     int tolerance;
+    int circleTolerance;
     int squareCount;
     int rectangleCount;
     int circleCount;
@@ -31,6 +27,11 @@ public class ShapeFinderModel {
         width = 0;
         height = 0;
     }
+//**************************************************************************************************************
+//Method:           setImage
+//Description:      updates the red, blue, and green int[][] to the new image height and width
+//Parameters:       Image image     the image with the new dimensions   
+//Returns:          None
     
     public void setImage(Image image){
         rawImage = image;
