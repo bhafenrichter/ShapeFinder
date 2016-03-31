@@ -29,9 +29,8 @@ public class ShapeFinder {
         //set up the regions
         Regions r = new Regions(2, model.rawImage.width, model.rawImage.height, model.rawImage.image, 0, true, 0);
         r.findRegions();
-        r.filterRegions(100, 10000, false, 0);
+        r.filterRegions(200, 10000, false, 0);
         r.computeRegionProperties();
-        
         ArrayList<Integer> regionIds = new ArrayList<Integer>();
         //find out what regionIDs have shapes
         for (int i = 0; i < r.labeledImage.length; i++) {
@@ -49,16 +48,23 @@ public class ShapeFinder {
             int[][] cur = r.getSingleRegion(regionId);
             int pixelCount = getPixelCount(cur);
             
+            //threshold for smaller shapes
+            if(pixelCount < 500){continue;}
+            
+            if(regionId == 74130){
+                System.out.println("");
+            }
+            
             int centroidX = r.centroids[regionId][0];
             int centroidY = r.centroids[regionId][1];
             //printImage(cur);
             
             if(checkForSquare(cur, model, model.tolerance)){
                 model.squareCount++;
-            }else if(checkForCircle(cur, model, centroidX, centroidY, pixelCount, model.circleTolerance)){
-                model.circleCount++;
             }else if(checkForRectangle(cur, model, pixelCount)){
                 model.rectangleCount++;
+            }else if(checkForCircle(cur, model, centroidX, centroidY, pixelCount, model.circleTolerance)){
+                model.circleCount++;
             }
         }
         System.out.println("Circles: " + model.circleCount + ", Squares: " + model.squareCount + ", Rectangles: " + model.rectangleCount);
@@ -76,7 +82,7 @@ public class ShapeFinder {
                 break;
             }
         }
-        
+        System.exit(0);
     }
 
 //**************************************************************************************************************
@@ -90,8 +96,8 @@ public class ShapeFinder {
 
         model.tolerance = 5;
         model.tolerance = input.getInteger(false, 0, 0, 0, "Specify Tolerance for Shape Finder: (Default: 5)");
-        
-        model.circleTolerance = 5;
+        if(model.tolerance == 0){model.tolerance = 5;}
+        model.circleTolerance = 10;
         String imagePath = input.getKeyboardInput("Specify the name of the file containing the image data: ");
         model.setImage(getImage(imagePath));
         return model;
